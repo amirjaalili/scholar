@@ -1,0 +1,6 @@
+{
+  "name": "Electronic Journal CMS",
+  "description": "A lightweight, high-performance, and secure Scientific Magazine CMS with role-based access for Authors, Reviewers, and Super Admins.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
