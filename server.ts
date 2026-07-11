@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
+import nodemailer from 'nodemailer';
 import { createServer as createViteServer } from 'vite';
 import { dbSimulation } from './src/db_simulation';
 import { User, ArticleStatus, AssignmentStatus, UserRole } from './src/types';
@@ -79,8 +80,19 @@ async function startServer() {
   // 1. AUTHENTICATION CONTROLLER ROUTES
   
   const verificationCodes = new Map<string, string>();
+  
+  // Set up Nodemailer transporter using environment variables
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
 
-  app.post('/api/auth/send-verification', (req: Request, res: Response) => {
+  app.post('/api/auth/send-verification', async (req: Request, res: Response) => {
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({ error: 'لطفا آدرس ایمیل خود را وارد کنید.' });
@@ -97,8 +109,29 @@ async function startServer() {
     
     console.log(`Verification code for ${email} is ${code}`);
 
-    // Sending back the code directly in the response for dev testing purposes
-    res.json({ success: true, message: `کد تایید ارسال شد. (کد شبیه‌سازی: ${code})` });
+    // If SMTP_USER is not set, fallback to simulated code for local dev so it doesn't break
+    if (!process.env.SMTP_USER) {
+      return res.json({ success: true, message: `کد تایید ارسال شد. (توجه: به دلیل عدم تنظیم SMTP، کد شبیه‌سازی است: ${code})` });
+    }
+
+    try {
+      await transporter.sendMail({
+        from: process.env.FROM_EMAIL || process.env.SMTP_USER,
+        to: email,
+        subject: 'کد تایید ثبت‌نام در سامانه نشریه',
+        text: `کد تایید شما: ${code}\n\nلطفا این کد را در فرم ثبت‌نام وارد کنید.`,
+        html: `<div dir="rtl" style="font-family: Tahoma, sans-serif; padding: 20px;">
+                 <h2>کد تایید ثبت‌نام</h2>
+                 <p>کد تایید شما برای ورود به سامانه:</p>
+                 <h1 style="color: #2563eb; letter-spacing: 5px;">${code}</h1>
+                 <p>لطفا این کد را در فرم ثبت‌نام وارد کنید.</p>
+               </div>`
+      });
+      res.json({ success: true, message: `کد تایید به ایمیل ${email} ارسال شد.` });
+    } catch (error) {
+      console.error('Email sending error:', error);
+      res.status(500).json({ error: 'خطا در ارسال ایمیل. لطفا تنظیمات SMTP سرور را بررسی کنید.' });
+    }
   });
 
   app.post('/api/auth/register', (req: Request, res: Response) => {
