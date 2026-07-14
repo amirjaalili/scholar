@@ -93,6 +93,10 @@ async function startServer() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    tls: {
+      // do not fail on invalid certs
+      rejectUnauthorized: false
+    }
   });
 
   app.post('/api/auth/send-verification', async (req: Request, res: Response) => {
