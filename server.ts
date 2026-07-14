@@ -96,7 +96,9 @@ async function startServer() {
     tls: {
       // do not fail on invalid certs
       rejectUnauthorized: false
-    }
+    },
+    logger: true,
+    debug: true
   });
 
   app.post('/api/auth/send-verification', async (req: Request, res: Response) => {
@@ -135,9 +137,11 @@ async function startServer() {
                </div>`
       });
       res.json({ success: true, message: `کد تایید به ایمیل ${email} ارسال شد.` });
-    } catch (error) {
+    } catch (error: any) {
+      console.log('--- EMAIL SENDING ERROR ---');
+      console.log(error);
       console.error('Email sending error:', error);
-      res.status(500).json({ error: 'خطا در ارسال ایمیل. لطفا تنظیمات SMTP سرور را بررسی کنید.' });
+      res.status(500).json({ error: `خطا در ارسال ایمیل: ${error.message || 'نامشخص'}` });
     }
   });
 
